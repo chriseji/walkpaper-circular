@@ -1,31 +1,44 @@
-# Walkpaper
+# Walkpaper 3
 
 ## About:
+
 Have a different wallpaper on each GNOME workspace.
 
+*Note: This project is a modernized fork of the original [Walkpaper](https://www.google.com/search?q=https://github.com/BlinkBP/walkpaper) extension by BlinkBP, completely rewritten to support GNOME 42+ (up to GNOME 50), Wayland, ESM modules, and GTK4/Libadwaita.*
+
 ## Installation:
-Compile the extension by running
+
+Download the `walkpaper3@chriseji.github.com.shell-extension.zip` file from the [Releases](https://www.google.com/search?q=../../releases) page and install it via terminal:
+
 ```
-    # make all
+    # gnome-extensions install walkpaper3@chriseji.github.com.shell-extension.zip
+
 ```
-Install `walkpaper.zip` using Tweak Tool and restart GNOME Shell (alt+F2 + 'r').
+
+Important for Wayland users: Log out of your current session and log back in to allow GNOME to detect the new extension. Enable it using the GNOME "Extensions" app or via terminal (`gnome-extensions enable walkpaper3@chriseji.github.com`).
+
+If you want to pack it yourself directly from the source code, clone the repository and run:
+
+```
+    # glib-compile-schemas schemas/
+    # gnome-extensions pack --extra-source=schemas/
+
+```
 
 At this point you have two options:
 
-You can either open extension's preferences and set paths to each workspace's wallpaper by double clicking on a specific row or use the default wallpaper changing method in GNOME settings.
+You can either open the extension's preferences (gear icon in the Extensions app) and assign specific wallpapers to each workspace using the native GTK4 file chooser, or use the default wallpaper changing method in native GNOME settings.
 
 More about the second method:
 
-To set the background image for a workspace, switch to that workspace and use any method to
-change the background E.g. standard background chooser (e.g. secondary click on background, "Change Background"),
-then close the backgrounds dialog (otherwise trying to set background on another workspace may trigger a workspace
-change back to the WS with the dialog)
+To set the background image for a workspace, switch to that workspace and change your background using the standard GNOME background chooser. When you switch away from that workspace, the extension will automatically save that background to the previous workspace.
 
-You can even use another extension or program that changes the backgrounds automatically.
+Remember that you can always manage your extensions from [https://extensions.gnome.org/local/](https://www.google.com/search?q=https://extensions.gnome.org/local/)
 
-Switch away from the workspace to trigger saving the current background.
+## Credits:
 
-Remember that you can always manage your extensions from https://extensions.gnome.org/local/
+Original concept and logic by BlinkBP. Modernization, GTK4 port, and Wayland support by chriseji.
 
 ## License:
-This project is licensed under the GNU License - see the [LICENSE.md](LICENSE.md) file for details
+
+This project is licensed under the GNU License - see the [LICENSE]() file for details.
