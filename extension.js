@@ -1,100 +1,141 @@
-const Gio = imports.gi.Gio;
-const Meta = imports.gi.Meta;
-
-const ExtensionUtils = imports.misc.extensionUtils;
+import Gio from 'gi://Gio';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const WORKSPACE_COUNT_KEY = 'workspace-count';
 const WORKSPACE_INDEX = 'workspace-index';
 const WALLPAPERS_KEY = 'workspace-wallpapers';
 const BACKGROUND_SCHEMA = 'org.gnome.desktop.background';
-const CURRENT_WALLPAPER_KEY = 'picture-uri';
 
-let _settings;
+// Claves para el tema claro y oscuro
+const PICTURE_URI_KEY = 'picture-uri';
+const PICTURE_URI_DARK_KEY = 'picture-uri-dark';
 
-function debugLog(s) {
-    //log(s);
-}
+export default class WalkpaperExtension extends Extension {
+    debugLog(s) {
+        // console.debug(`[Walkpaper] ${s}`);
+    }
 
-function _changeWallpaper() {
-    debugLog("changeWallpaper");
-    let backgroundSettings = new Gio.Settings({ schema_id: BACKGROUND_SCHEMA });
-    let paths = _settings.get_strv(WALLPAPERS_KEY);
-    let index = _settings.get_int(WORKSPACE_INDEX);
+    _restoreCurrentWallpaper() {
+        let paths = this._settings.get_strv(WALLPAPERS_KEY);
+        let index = global.workspace_manager.get_active_workspace_index();
+        let wallpaper = paths[index];
 
-    debugLog("Walkpaper change from WS " + index);
+        if (!wallpaper && paths.length > 0) {
+            wallpaper = paths[0]; 
+        }
 
-    // Save wallpaper for previous WS if changed.
-    let wallpaper = backgroundSettings.get_string(CURRENT_WALLPAPER_KEY);
-
-    paths[index] = wallpaper;
-
-    // Fill in empty entries up to to current, otherwise set_strv fails
-    for (let i=0; i < index; i++) {
-        if (typeof paths[i] === "undefined") {
-            paths[i] = wallpaper;
+        if (wallpaper) {
+            //Sicroniza los fondos ya sea para tema claro u oscuro (no permite tener fondos diferentes para cada tema, pero es lo que hay)
+            this._backgroundSettings.set_string(PICTURE_URI_KEY, wallpaper);
+            this._backgroundSettings.set_string(PICTURE_URI_DARK_KEY, wallpaper);
         }
     }
-    _settings.set_strv(WALLPAPERS_KEY, paths);
 
-    // Now get wallpaper for current workspace
-    index = global.workspace_manager.get_active_workspace_index();
-    debugLog("Walkpaper change to WS " + index);
+    _changeWallpaper() {
+        this.debugLog("changeWallpaper");
+        
+        let paths = this._settings.get_strv(WALLPAPERS_KEY);
+        let index = this._settings.get_int(WORKSPACE_INDEX);
 
-    wallpaper = paths[index];
-    if ((typeof wallpaper === "undefined") || (wallpaper == "")) {
-        wallpaper = paths[0];    // Default
+        this.debugLog("Walkpaper change from WS " + index);
+        let wallpaper = this._backgroundSettings.get_string(PICTURE_URI_KEY);
+
+        while (paths.length <= index) {
+            paths.push(wallpaper);
+        }
+        paths[index] = wallpaper;
+
+        // Se bloquea la señal temporalmente para evitar que el listener en tiempo real cause un bucle
+        this._settings.block_signal_handler(this._settingsChangedId);
+        this._settings.set_strv(WALLPAPERS_KEY, paths);
+        this._settings.unblock_signal_handler(this._settingsChangedId);
+
+        index = global.workspace_manager.get_active_workspace_index();
+        this.debugLog("Walkpaper change to WS " + index);
+
+        wallpaper = paths[index];
+        if (!wallpaper) {
+            wallpaper = paths[0];
+        }
+
+        this.debugLog("Walkpaper set wallpaper to " + wallpaper);
+        this._backgroundSettings.set_string(PICTURE_URI_KEY, wallpaper);
+        this._backgroundSettings.set_string(PICTURE_URI_DARK_KEY, wallpaper);
+
+        this._changeIndex();
     }
 
-    //Change wallpaper
-    debugLog("Walkpaper set wallpaper to " + wallpaper);
-    backgroundSettings.set_string(CURRENT_WALLPAPER_KEY, wallpaper);
+    _changeIndex() {
+        let index = global.workspace_manager.get_active_workspace_index();
+        this._settings.set_int(WORKSPACE_INDEX, index);
+    }
 
-    _changeIndex();
-}
+    _workspaceNumChanged() {
+        let newCount = global.workspace_manager.get_n_workspaces();
+        let oldCount = this._settings.get_int(WORKSPACE_COUNT_KEY);
+        this._settings.set_int(WORKSPACE_COUNT_KEY, newCount);
 
-function _changeIndex() {
-    let index = global.workspace_manager.get_active_workspace_index();
-    _settings.set_int(WORKSPACE_INDEX, index);
-}
+        if (newCount < oldCount) {
+            let paths = this._settings.get_strv(WALLPAPERS_KEY);
+            if (paths.length > newCount) {
+                paths = paths.slice(0, newCount);
+                
+                this._settings.block_signal_handler(this._settingsChangedId);
+                this._settings.set_strv(WALLPAPERS_KEY, paths);
+                this._settings.unblock_signal_handler(this._settingsChangedId);
+            }
+        }
+    }
 
-function _workspaceNumChanged() {
-    let workspaceNum = Meta.prefs_get_num_workspaces();
-    _settings.set_int(WORKSPACE_COUNT_KEY, workspaceNum);
-}
+    enable() {
+        console.log("Walkpaper enable");
 
-function init(metadata) {
-    log("Walkpaper init");
-}
+        this._settings = this.getSettings();
+        this._backgroundSettings = new Gio.Settings({ schema_id: BACKGROUND_SCHEMA });
 
-let wSwitchedSignalId;
-let wAddedSignalId;
-let wRemovedSignalId;
+        this._changeIndex();
+        this._workspaceNumChanged();
 
-function enable() {
-    log("Walkpaper enable");
+        // Escucha cambios desde prefs.js en tiempo real
+        this._settingsChangedId = this._settings.connect(
+            'changed::' + WALLPAPERS_KEY, 
+            this._restoreCurrentWallpaper.bind(this)
+        );
 
-    //Initialize globals
-    _settings = ExtensionUtils.getSettings();
+        this._restoreCurrentWallpaper();
 
-    //Initialize settings values
-    _changeIndex();
-    _workspaceNumChanged();
+        this._wSwitchedSignalId = global.workspace_manager.connect(
+            'workspace-switched', this._changeWallpaper.bind(this)
+        );
+        this._wAddedSignalId = global.workspace_manager.connect(
+            'workspace-added', this._workspaceNumChanged.bind(this)
+        );
+        this._wRemovedSignalId = global.workspace_manager.connect(
+            'workspace-removed', this._workspaceNumChanged.bind(this)
+        );
+    }
 
-    //Connect signals
-    wSwitchedSignalId = global.workspace_manager.connect('workspace-switched', _changeWallpaper);
-    wAddedSignalId = global.workspace_manager.connect('workspace-added', _workspaceNumChanged);
-    wRemovedSignalId = global.workspace_manager.connect('workspace-removed', _workspaceNumChanged);
-}
+    disable() {
+        console.log("Walkpaper disable");
 
-function disable() {
-    log("Walkpaper disable");
+        if (this._wSwitchedSignalId) {
+            global.workspace_manager.disconnect(this._wSwitchedSignalId);
+            this._wSwitchedSignalId = null;
+        }
+        if (this._wAddedSignalId) {
+            global.workspace_manager.disconnect(this._wAddedSignalId);
+            this._wAddedSignalId = null;
+        }
+        if (this._wRemovedSignalId) {
+            global.workspace_manager.disconnect(this._wRemovedSignalId);
+            this._wRemovedSignalId = null;
+        }
+        if (this._settingsChangedId) {
+            this._settings.disconnect(this._settingsChangedId);
+            this._settingsChangedId = null;
+        }
 
-    //Dispose of globals
-    _settings?.run_dispose();
-    _settings = null;
-
-    //Disconnect signals
-    global.workspace_manager.disconnect(wSwitchedSignalId);
-    global.workspace_manager.disconnect(wAddedSignalId);
-    global.workspace_manager.disconnect(wRemovedSignalId);
+        this._settings = null;
+        this._backgroundSettings = null;
+    }
 }

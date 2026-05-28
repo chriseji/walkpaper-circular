@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="gnome-shell-extensions">
-  <schema id="org.gnome.shell.extensions.walkpaper" path="/org/gnome/shell/extensions/walkpaper/">
+<schemalist gettext-domain="walkpaper">
+  <schema id="org.gnome.shell.extensions.walkpaper3" path="/org/gnome/shell/extensions/walkpaper3/">
     <key name="workspace-wallpapers" type="as">
       <default>[]</default>
       <summary>Paths to each workspace's wallpaper.</summary>
