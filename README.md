@@ -3,6 +3,7 @@
 ## About:
 
 Have a different wallpaper on each GNOME workspace.
+
 *Note: This project is a modernized fork of the original [Walkpaper](https://www.google.com/search?q=https://github.com/BlinkBP/walkpaper) extension by BlinkBP, completely rewritten to support GNOME 42+ (up to GNOME 50), Wayland, ESM modules, and GTK4/Libadwaita.*
 
 ## Installation:
