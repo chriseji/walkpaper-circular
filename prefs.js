@@ -29,8 +29,8 @@ export default class WalkpaperPreferences extends ExtensionPreferences {
             }
 
             currentGroup = new Adw.PreferencesGroup({
-                title: _('Lista circular de fondos'),
-                description: _('Define los fondos que se asignarán a los espacios de trabajo en orden circular.')
+                title: _('Fondos de los espacios de trabajo'),
+                description: _('Configura los fondos que se asignarán a los espacios de trabajo.')
             });
             page.add(currentGroup);
 
