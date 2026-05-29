@@ -6,27 +6,29 @@ const WALLPAPERS_KEY = 'workspace-wallpapers';
 
 export default class WalkpaperPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        this.settings = this.getSettings();
+
+        this.settings = this.getSettings(); 
         this._buildUI(window);
 
-        this._closeSignalId = window.connect('close-request', () => {
-            this._cleanup(window);
-            return false; // Permite que la ventana se cierre
-        });
+        window.connectObject(
+            'close-request',
+            () => {
+                this._cleanup(window);
+                return false;
+            },
+            this
+        );
     }
 
     _cleanup(window) {
-        if (this._closeSignalId) {
-            window.disconnect(this._closeSignalId);
-            this._closeSignalId = null;
-        }
+        window.disconnectObject(this);
 
         if (this.page) {
             window.remove(this.page);
             this.page = null;
         }
-        
         this.group = null;
+        this.settings = null;
     }
 
     _buildUI(window) {
