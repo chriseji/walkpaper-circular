@@ -1,13 +1,13 @@
 {
-  "extension-id": "walkpaper3",
-  "settings-schema": "org.gnome.shell.extensions.walkpaper3",
+  "extension-id": "walkpaper-circular",
+  "settings-schema": "org.gnome.shell.extensions.walkpaper-circular",
   "name": "Walkpaper Circular",
   "description": "Assigns a different wallpaper to each workspace in a circular carousel. This is a modernized fork of the original Walkpaper extension by BlinkBP.",
   "shell-version": [
     "50"
   ],
-  "url": "https://github.com/chriseji/walkpaper3",
-  "uuid": "walkpaper3@chriseji.github.com",
+  "url": "https://github.com/chriseji/walkpaper-circular",
+  "uuid": "walkpaper-circular@chriseji.github.com",
   "gettext-domain": "walkpaper",
-  "version": 11
+  "version": 12
 }
