@@ -8,13 +8,34 @@ export default class WalkpaperPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         this.settings = this.getSettings();
         this._buildUI(window);
+
+        this._closeSignalId = window.connect('close-request', () => {
+            this._cleanup(window);
+            return false; // Permite que la ventana se cierre
+        });
+    }
+
+    _cleanup(window) {
+        if (this._closeSignalId) {
+            window.disconnect(this._closeSignalId);
+            this._closeSignalId = null;
+        }
+
+        if (this.page) {
+            window.remove(this.page);
+            this.page = null;
+        }
+        
+        this.group = null;
     }
 
     _buildUI(window) {
-        if (this.page) this.window?.remove(this.page);
-        this.window = window;
+        if (this.page) {
+            window.remove(this.page);
+        }
+
         this.page = new Adw.PreferencesPage();
-        this.window.add(this.page);
+        window.add(this.page);
 
         this.group = new Adw.PreferencesGroup({
             title: _('Lista circular de fondos'),
