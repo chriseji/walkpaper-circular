@@ -1,7 +1,6 @@
-# Walkpaper 3
+# Walkpaper Circular
 
 ## About:
-
 Have a different wallpaper on each GNOME workspace.
 
 *Note: This project is a modernized fork of the original [Walkpaper](https://www.google.com/search?q=https://github.com/BlinkBP/walkpaper) extension by BlinkBP, completely rewritten to support GNOME 42+ (up to GNOME 50), Wayland, ESM modules, and GTK4/Libadwaita.*
@@ -25,13 +24,9 @@ If you want to pack it yourself directly from the source code, clone the reposit
 
 ```
 
-At this point you have two options:
+For setting wallpapers:
 
-You can either open the extension's preferences (gear icon in the Extensions app) and assign specific wallpapers to each workspace using the native GTK4 file chooser, or use the default wallpaper changing method in native GNOME settings.
-
-More about the second method:
-
-To set the background image for a workspace, switch to that workspace and change your background using the standard GNOME background chooser. When you switch away from that workspace, the extension will automatically save that background to the previous workspace.
+You need open the extension's preferences (gear icon in the Extensions app) and assign specific wallpapers to each workspace using the native GTK4 file chooser.
 
 Remember that you can always manage your extensions from [https://extensions.gnome.org/local/](https://www.google.com/search?q=https://extensions.gnome.org/local/)
 
