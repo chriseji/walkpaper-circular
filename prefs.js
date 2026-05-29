@@ -1,117 +1,112 @@
 import Adw from 'gi://Adw';
-import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ExtensionPreferences, gettext as _ } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const WORKSPACE_COUNT_KEY = 'workspace-count';
 const WALLPAPERS_KEY = 'workspace-wallpapers';
 
 export default class WalkpaperPreferences extends ExtensionPreferences {
-    
     fillPreferencesWindow(window) {
-        const settings = this.getSettings();
+        this.settings = this.getSettings();
+        this._buildUI(window);
+    }
 
-        const page = new Adw.PreferencesPage();
-        const group = new Adw.PreferencesGroup({
-            title: _('Wallpapers por Espacio de Trabajo'),
-            description: _('Asigna un fondo de pantalla específico a cada uno de tus espacios de trabajo.')
+    _buildUI(window) {
+        if (this.page) this.window?.remove(this.page);
+        this.window = window;
+        this.page = new Adw.PreferencesPage();
+        this.window.add(this.page);
+
+        this.group = new Adw.PreferencesGroup({
+            title: _('Lista circular de fondos'),
+            description: _('Define los fondos que se asignarán a los espacios de trabajo en orden circular.')
         });
-        page.add(group);
+        this.page.add(this.group);
 
-        const workspaceNum = settings.get_int(WORKSPACE_COUNT_KEY);
-        const paths = settings.get_strv(WALLPAPERS_KEY);
-        if (workspaceNum === 0) {
-            const emptyRow = new Adw.ActionRow({
-                title: _('No hay espacios de trabajo configurados')
-            });
-            group.add(emptyRow);
-        } else {
-            for (let i = 0; i < workspaceNum; i++) {
-                const path = paths[i] || '';
-                const row = this._createWorkspaceRow(i, path, settings, window);
-                group.add(row);
-            }
+        let paths = this.settings.get_strv(WALLPAPERS_KEY);
+
+        for (let i = 0; i < paths.length; i++) {
+            this._addRow(i, paths[i], window);
         }
 
-        window.add(page);
+        const addRow = new Adw.ActionRow({ title: _('Añadir fondo') });
+        const addBtn = new Gtk.Button({ icon_name: 'list-add-symbolic', valign: Gtk.Align.CENTER });
+        addBtn.connect('clicked', () => this._appendNewWallpaper(window));
+        addRow.add_suffix(addBtn);
+        this.group.add(addRow);
     }
 
-    _createWorkspaceRow(index, currentPath, settings, window) {
+    _addRow(index, currentPath, window) {
         const row = new Adw.ActionRow({
-            title: _('Espacio de Trabajo') + ' ' + (index + 1),
-            subtitle: currentPath || _('Fondo del sistema por defecto')
+            title: _('Fondo') + ' ' + (index + 1),
+            subtitle: currentPath || _('Sin fondo')
         });
 
-        const button = new Gtk.Button({
-            icon_name: 'document-open-symbolic',
-            valign: Gtk.Align.CENTER,
-            margin_top: 10,
-            margin_bottom: 10
-        });
-        button.set_tooltip_text(_('Seleccionar imagen de fondo'));
+        const openBtn = new Gtk.Button({ icon_name: 'document-open-symbolic', valign: Gtk.Align.CENTER });
+        openBtn.connect('clicked', () => this._openFileDialog(index, window));
+        row.add_suffix(openBtn);
 
-        button.connect('clicked', () => {
-            this._openFileDialog(index, row, settings, window);
-        });
+        const deleteBtn = new Gtk.Button({ icon_name: 'user-trash-symbolic', valign: Gtk.Align.CENTER });
+        deleteBtn.add_css_class('destructive-action');
+        deleteBtn.connect('clicked', () => this._removeWallpaper(index, window));
+        row.add_suffix(deleteBtn);
 
-        row.add_suffix(button);
-
-        const clearButton = new Gtk.Button({
-            icon_name: 'edit-clear-symbolic',
-            valign: Gtk.Align.CENTER,
-            margin_top: 10,
-            margin_bottom: 10
-        });
-        clearButton.add_css_class('flat');
-        clearButton.set_tooltip_text(_('Volver al fondo por defecto'));
-
-        clearButton.connect('clicked', () => {
-            this._updateWallpaperSettings(index, '', settings, row);
-        });
-
-        row.add_suffix(clearButton);
-
-        return row;
+        this.group.add(row);
     }
 
-    _openFileDialog(index, row, settings, window) {
-        const dialog = new Gtk.FileDialog({
-            title: _('Selecciona un fondo de pantalla')
-        });
-
+    _appendNewWallpaper(window) {
+        const dialog = new Gtk.FileDialog({ title: _('Selecciona un fondo') });
         const filter = new Gtk.FileFilter();
         filter.set_name(_("Imágenes"));
         filter.add_mime_type("image/png");
         filter.add_mime_type("image/jpeg");
         filter.add_mime_type("image/webp");
         filter.add_mime_type("image/svg+xml");
-        filter.add_mime_type("image/bmp");
-        filter.add_mime_type("image/tiff");
         dialog.set_default_filter(filter);
 
         dialog.open(window, null, (dialog, res) => {
             try {
                 const file = dialog.open_finish(res);
                 if (file) {
-                    const newUri = file.get_uri(); 
-                    this._updateWallpaperSettings(index, newUri, settings, row);
+                    let paths = this.settings.get_strv(WALLPAPERS_KEY);
+                    paths.push(file.get_uri());
+                    this.settings.set_strv(WALLPAPERS_KEY, paths);
+                    this._buildUI(window);
                 }
             } catch (e) {
-                console.log(`[Walkpaper] Dialog closed: ${e.message}`);
+                console.log(`[Walkpaper] Cancelado: ${e.message}`);
             }
         });
     }
 
-    _updateWallpaperSettings(index, newUri, settings, row) {
-        const paths = settings.get_strv(WALLPAPERS_KEY);
-        
-        while (paths.length <= index) {
-            paths.push('');
-        }
-        
-        paths[index] = newUri;
-        settings.set_strv(WALLPAPERS_KEY, paths);
-        
-        row.set_subtitle(newUri || _('Fondo del sistema por defecto'));
+    _openFileDialog(index, window) {
+        const dialog = new Gtk.FileDialog({ title: _('Selecciona un fondo') });
+        const filter = new Gtk.FileFilter();
+        filter.set_name(_("Imágenes"));
+        filter.add_mime_type("image/png");
+        filter.add_mime_type("image/jpeg");
+        filter.add_mime_type("image/webp");
+        filter.add_mime_type("image/svg+xml");
+        dialog.set_default_filter(filter);
+
+        dialog.open(window, null, (dialog, res) => {
+            try {
+                const file = dialog.open_finish(res);
+                if (file) {
+                    let paths = this.settings.get_strv(WALLPAPERS_KEY);
+                    paths[index] = file.get_uri();
+                    this.settings.set_strv(WALLPAPERS_KEY, paths);
+                    this._buildUI(window);
+                }
+            } catch (e) {
+                console.log(`[Walkpaper] Cancelado: ${e.message}`);
+            }
+        });
+    }
+
+    _removeWallpaper(index, window) {
+        let paths = this.settings.get_strv(WALLPAPERS_KEY);
+        paths.splice(index, 1);
+        this.settings.set_strv(WALLPAPERS_KEY, paths);
+        this._buildUI(window);
     }
 }
